@@ -79,9 +79,10 @@ class HTTPConnectionHandler:
         Send HTTP response to client.
         """
         response_string = response.formatted_string()
-        self.connection.sendall(bytes(response_string, 'utf-8'))
+        result = self.connection.sendall(bytes(response_string, 'utf-8'))
+        assert result is None, 'Incomplete file sent.'
 
-    def send_body(self, file_path):
+    def send_file(self, file_path):
         total_bytes_sent = 0
         with open(file_path, 'rb') as f:
             total_bytes_sent = self.connection.sendfile(f)

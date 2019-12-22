@@ -109,4 +109,5 @@ class HTTPServer(TCPServer):
             'Last-Modified': last_modified_time
         }
         http_connection.send_response(HTTPResponse(200, headers=response_headers))
-        http_connection.send_body(abs_requested_path)
+        n_bytes_sent = http_connection.send_file(abs_requested_path)
+        assert n_bytes_sent == file_size, 'Incomplete file sent.'
