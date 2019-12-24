@@ -13,9 +13,6 @@ def signal_handler(signum, frame):
     else:
         print('Other signal received', signum)
 
-def on_request(request):
-    print('Got request:', request)
-
 if __name__ == "__main__":
     server = HTTPServer(8080)
     server.serve('sample_docroot', {

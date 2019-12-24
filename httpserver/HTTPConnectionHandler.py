@@ -142,7 +142,7 @@ class HTTPConnectionHandler:
 
         # Parse key-value headers
         headers = {}
-        required_keys = {'Host'}
+        required_keys = {'Host'} # specify required header(s) here
         for line in lines[1:]:
             key_value = line.split(': ')
             if len(key_value) != 2:

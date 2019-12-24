@@ -18,13 +18,18 @@ class HTTPServer(TCPServer):
     def __init__(self, port):
         # We support only GET, so use daemon threads
         TCPServer.__init__(self, port, self.handle_tcp_connection, use_daemon_threads=True)
-        self.request_handler_func = None
         self.serve_docroot = None
         self.serve_config = {}
 
     def handle_tcp_connection(self, connection, client_address):
         http_connection = HTTPConnectionHandler(connection, client_address)
         try:
+            # Continue to get request(s) over the socket
+            # Until: 
+            # client closes the connection, 
+            # client timeout, 
+            # request header is not keep-alive,
+            # or bad request from client.
             while True:
                 request = http_connection.get_request()
                 if not request: 
@@ -42,12 +47,6 @@ class HTTPServer(TCPServer):
             http_connection.send_response(HTTPResponse.client_error_400())
         finally:
             http_connection.close()
-
-    def register_handler(self, request_handler_func):
-        """
-        Register a function to handle a request.
-        """
-        self.request_handler_func = request_handler_func
 
     def serve(self, docroot, serve_config={}):
         """
@@ -108,6 +107,8 @@ class HTTPServer(TCPServer):
             'Content-Length': file_size,
             'Last-Modified': last_modified_time
         }
+        # Send first-line and headers
         http_connection.send_response(HTTPResponse(200, headers=response_headers))
+        # Send body
         n_bytes_sent = http_connection.send_file(abs_requested_path)
         assert n_bytes_sent == file_size, 'Incomplete file sent.'

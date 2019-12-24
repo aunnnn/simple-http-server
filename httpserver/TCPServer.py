@@ -54,6 +54,7 @@ class TCPServer:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(sa)
                 s.listen(self.connection_backlog_queue_size)
+                debugprint('Binds to a socket address:', sa)
             except OSError as e:
                 debugprint('OSError', e)
                 s.close()
