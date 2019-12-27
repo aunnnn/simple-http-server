@@ -18,7 +18,7 @@ In this guide I will share my experience from coding a simple HTTP server on top
 ## 1. Making TCP a little more convenient
 First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket APIs to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. 
 
-Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this poinit, server and client can communicate through `send()` and `recv()` data.
+Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
 ## 2. From TCP to HTTP
 Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends the `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py). 
@@ -46,7 +46,7 @@ User-Agent: curl/7.64.0\r\n
 Accept: */*\r\n
 \r\n
 ```
-New lines above are just for readability. Also there's no body here since it's a GET request.
+New lines above are just for readability. Also, there's no body here since it's a GET request.
 
 Now here's the catch: *There are always two `\r\n`'s at the end of the meta-information part.* Using this fact, we can continuously pull data from the socket, until we find `\r\n\r\n`, where we will cut off a substring up until that point:
 ```python
@@ -104,8 +104,8 @@ Then, we accept each connection by calling this in a loop:
 - `accept()`: returns a new connection (*blocks* until there's one)
 
 For client it is simpler:
-- `socket()`
-- `connect()`: connect to a remote socket at address
+- `socket()`: create a socket
+- `connect()`: connect to a remote socket at given address
 
 After this, client and server communicate with `send()` and `recv()` data. The sender will put the data on the pipe (or buffer) with `send()` and the receiver will pull it out with `recv()`. Your Operating System then continues the job of actually sending it.
 
