@@ -36,7 +36,7 @@ First recall the format of HTTP request and response, which involves 4 sections:
 3. `\r\n` (Indicate the end of meta-information)
 4. Body (Optional, i.e. in POST request, or response)
 
-Each line in section 1 and 2 end with `\r\n` (called "Carriage Return Line Feed" or CRLF). If there's a body, it immediate follows that CRLF in section 3, **without any extra `\r\n` after it.**
+Each line in section 1 and 2 end with `\r\n` (called "Carriage Return Line Feed" or CRLF). If there's a body, it immediately follows that CRLF in section 3, **without any extra `\r\n` after it.**
 
 Below is a sample request (sent by `curl localhost:8080 -v`):
 ```
