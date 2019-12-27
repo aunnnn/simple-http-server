@@ -16,15 +16,14 @@ HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good wa
 In this guide I will share my experience from coding a simple HTTP server on top of TCP.
 
 ## 1. Making TCP a little more convenient
-First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket APIs to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. 
+First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket APIs to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. Note that this part is the lowest-level code we have here.
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
 ## 2. From TCP to HTTP
-Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends the `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py). 
+Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py).
 
 ### 2.1 Make the Server Understand HTTP
-
 To understand what someone's talking about on the internet, we just have to know how to *detect* and *parse* the HTTP language. `HTTPConnectionHandler` does just that, though only a very small subset of it.
 
 #### Detecting/Delimiting a Request
@@ -72,7 +71,7 @@ More code for the detection part is at `HTTPConnectionHandler.__detect_request_f
 More details about the format of HTTP Messages is [here.](https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages)
 
 #### Parsing a Request
-Now we have a string that *potentially* represents a request. We have to parse it into a HTTP request. This deals with details like splitting lines with `\r\n`, validating that the start-line should be in the form of `GET /cat.png HTTP/1.1`, the header should be in the form of `Key: Value`, etc. At any point if there's something wrong in the format, we just raise `400 Bad Request`. See `HTTPConnectionHandler.__parse_request`.
+Now we have a string that *potentially* represents a request, and we just have to parse it into a HTTP request according to the protocol. This deals with details like splitting lines with `\r\n`, validating that the start-line should be in the form of `GET /cat.png HTTP/1.1`, the header should be in the form of `Key: Value`, etc. At any point if there's something wrong in the format, we just raise `400 Bad Request`. See `HTTPConnectionHandler.__parse_request`.
 
 ### 2.2 Make the Server Talks HTTP
 Here we have to **respond** back in the same HTTP language. We use the same format as explained before.
@@ -107,7 +106,7 @@ For client it is simpler:
 - `socket()`: create a socket
 - `connect()`: connect to a remote socket at given address
 
-After this, client and server communicate with `send()` and `recv()` data. The sender will put the data on the pipe (or buffer) with `send()` and the receiver will pull it out with `recv()`. Your Operating System then continues the job of actually sending it.
+After this, client and server communicate with `send()` and `recv()`. The sender will put the data on the pipe (or buffer) with `send()` and the receiver will pull it out with `recv()`. Your Operating System then continues the job of actually sending it.
 
 How much you send or receive are independent. Sender may send 1 MB, and you may receive one byte each time with `recv(1)`. But that would require a million of `recv()` calls...
 
