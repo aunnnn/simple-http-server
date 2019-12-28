@@ -20,6 +20,8 @@ First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper 
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
+[A quick intro about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
+
 ## 2. From TCP to HTTP
 Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py).
 
@@ -88,9 +90,11 @@ The last bit is important. Since we're serving some files, there will be a body 
 ---
 ## Brief Overview of Socket Programming and TCP
 
-Socket provides a set of low-level APIs that allow two computers to talk to each other. A regular web or mobile engineer may never need to know about it, but whenever two machines communicate on the internet, it always involves sockets under the hood. Socket has support for TCP (or UDP) where we can build something like HTTP upon it.
+Socket provides a set of *low-level* APIs that allow two computers to talk to each other. A regular web or mobile engineer may never need to know about it, but whenever two machines communicate on the internet, it always involves sockets under the hood. Socket has support for TCP (or UDP) where we can build something like HTTP upon it.
 
-Imagine socket as a data pipe, where both ends (client and server) will be used to communicate. Each end is uniquely identified with an IP address and a port number, i.e. (`127.0.0.1`, `8080`). A server's port number for HTTP is usually `80` just so the browser knows where to contact. A client's port number is not important and can be anything unreserved.
+Imagine socket as a data pipe, where both ends (client and server) will be used to communicate *real-time*. Each end is uniquely identified with an IP address and a port number, i.e. (`127.0.0.1`, `8080`). A server's port number for HTTP is agreed by everyone as `80`, just so the browser knows where to contact. A client's port number is not important and can be anything (that is not reserved by the OS).
+
+As a side note: Previously when I heard about socket, I always thought it is something *special* and high-level. Something that is different from what I did in everyday coding tasks, which just involves sending out API requests and parsing JSON responses. However it is the **opposite**. Socket's always been sitting underneath, abstracted away from my everyday tasks the entire time. It is **TCP**, or a transport layer inside all the networking libraries I've been using!
 
 There will be some formality to set up the socket. The process will be different for setting up a passive socket (server) that waits for incoming connections, and an active socket (client) that initiates the outgoing connection.
 
