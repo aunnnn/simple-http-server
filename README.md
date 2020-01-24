@@ -13,10 +13,10 @@ Change `sample_docroot` in `demo.py` to any other folder to serve from that root
 
 HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good way to wrap my head around it. We heard statements like "TCP is a transport layer" and "HTTP sits on top of TCP" and nod along, **but what do they actually mean though?**
 
-In this guide I will share my experience from coding a simple HTTP server on top of TCP.
+In this guide I will show how to build a simple HTTP server on top of TCP via Socket programming.
 
-## 1. Making TCP a little more convenient
-First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket APIs to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. Note that this part is the lowest-level code we have here.
+## 1. TCP Server with Socket API
+Socket programming is like a low-level tool for communicating with other computers via the internet. We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have.
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
