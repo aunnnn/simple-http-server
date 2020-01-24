@@ -20,7 +20,7 @@ First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper 
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
-[A quick intro about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
+[Quick intro for socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
 
 ## 2. From TCP to HTTP
 Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py).
