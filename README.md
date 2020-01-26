@@ -39,12 +39,18 @@ ________|^|_______
         ...  <~~~ DATA ENTERS HERE
 ```
  ### Internet Protocol Layer (IP)
- As you've imagined the IP (or Network) layer deals with IP addresses. At the level below it, the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address.
+ As you've imagined the IP (or Network) layer deals with IP addresses. The level directly below it (not shown in the diagram), the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address.
  
- That's why IP layer is important. It lets you decouple the hardware entity from your network entity. **Two devices won't be required to talk directly.** We can use some clever mechanism to pass along data through many nodes in the network, and simulate the end-to-end talking across the globe. We don't care how many hops the data takes or which devices it goes through etc., in order to reach the destination, **as long as it reaches the right one.** Otherwise, how would a laptop talks to another laptop in another part of the world?
-
- #### Two Problems
-IP layer makes sure we sent *packets* between two locations correctly. But:
+ That's why IP layer is important. It lets you decouple the hardware entity from your network entity. To emphasize, **now two devices won't be required to talk directly.** 
+ 
+ We can use some clever mechanism to pass along data through many nodes in the network, and simulate the end-to-end talking across the globe. We don't care how many hops the data takes or which devices it goes through etc., in order to reach the destination, **as long as it reaches the right one.** Otherwise, how would a laptop talks to another laptop in another part of the world?
+```
+👨‍💻_____O           O   O
+        \         / \ / \___👩‍💻
+         O ----- O   O
+```
+ #### There are two big problems though
+Although IP layer makes sure we sent *packets* between two locations correctly, but:
 1. What if a packet gets lost somehow, i.e. an intermediate router simply burns and dies? 
 2. How would we send a very big, i.e. 20 GB, data over the internet? In one shot? Probably not. First it's impossible to put the whole file into the hardware to send. In general, we want to be strategic. We send and receive data in smaller chunks, i.e. in IP packets to reduce the impact of a data loss.
 
@@ -65,18 +71,22 @@ while len(unsent_packets) > 0:
         send_packet(p, ip_address)
 ```
 
-However, some packets might arrive faster than the others. Some will get lost. In addition, we cannot afford to wait until the previous packet is sent before we start sending the next one. We want to somehow send them together in parallel. How to deal with these?
+However, some packets might arrive faster than the others. Some will get lost. In addition, we cannot afford to wait until the previous packet is sent before we start sending the next one. We want to somehow send them together in parallel, to get things done faster.
 
-One idea is to attach a number to each packet to represent the original order. When it arrives, the receiver puts each packet in an *infinite array* at the corresponding spot.
+But the thing is: **How to maintain the original order despite all of these problems?**
+
+One idea is to *attach a number to each packet* to represent the original order. When it arrives, the receiver puts each packet *at the corresponding spot in an infinite array*.
 
 ```
- `last_reliable_index`
+`last_reliable_index`
         |
     ____v____________________
 ... p6|p7|__|__|p10|__|p12|__ ...
 ```
 
-For example, `p10` and `p12` happen to arrive faster than `p8` and `p9` (they might be lost). We update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above.
+For example, here packets `p10` and `p12` happen to arrive faster than `p8` and `p9` (they might be lost). 
+
+We also update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above.
 
 Of course there're problems to think about with this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that *it's possible to make reliability out of unreliable (IP) channels.*
 
