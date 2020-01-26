@@ -1,5 +1,5 @@
 # From TCP to HTTP: An Introduction to Web Server: 
-A simple HTTP server built directly from socket APIs. 
+A (very) simple HTTP server built straight from socket API. 
 
 Run:
 ```python
@@ -11,18 +11,96 @@ Change `sample_docroot` in `demo.py` to any other folder to serve from that root
 
 ---
 
-HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good way to wrap my head around it. We heard statements like "TCP is a transport layer" and "HTTP sits on top of TCP" and nod along, **but what do they actually mean though?**
+HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good way to wrap my head around it. We heard things like "TCP is a transport layer", "reliable", or "HTTP sits on top of TCP", **but what do they actually mean though?** In this guide I will show how to code a simple HTTP server on top of TCP via socket API.
 
-In this guide I will share my experience from coding a simple HTTP server on top of TCP.
+## (Optional) Introduction: From IP to TCP
 
-## 1. Making TCP a little more convenient
-First we will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket APIs to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. Note that this part is the lowest-level code we have here.
+You may [jump to the TCP server part directly](#part-1-making-tcp-a-little-more-convenient).
+
+In networking, a higher layer builds a new abstraction on top of the lower ones. Recall the OSI-like diagram for the internet:
+```
+__________________
+|                |
+| SOME COOL APP  |
+|________________|
+________|^|_______
+|                |
+|       HTTP     |
+|________________|
+________|^|_______
+|                |
+|       TCP      |
+|________________|
+________|^|_______
+|                |
+|       IP       |
+|________________|
+        |^|
+        ...  <~~~ DATA ENTERS HERE
+```
+ ### Internet Protocol Layer (IP)
+ As you've imagined the IP (or Network) layer deals with IP addresses. At the level below it, the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address.
+ 
+ That's why IP layer is important. It lets you decouple the hardware entity from your network entity. **Two devices won't be required to talk directly.** We can use some clever mechanism to pass along data through many nodes in the network, and simulate the end-to-end talking across the globe. We don't care how many hops the data takes or which devices it goes through etc., in order to reach the destination, **as long as it reaches the right one.** Otherwise, how would a laptop talks to another laptop in another part of the world?
+
+ #### Two Problems
+IP layer makes sure we sent *packets* between two locations correctly. But:
+1. What if a packet gets lost somehow, i.e. an intermediate router simply burns and dies? 
+2. How would we send a very big, i.e. 20 GB, data over the internet? In one shot? Probably not. First it's impossible to put the whole file into the hardware to send. In general, we want to be strategic. We send and receive data in smaller chunks, i.e. in IP packets to reduce the impact of a data loss.
+
+That is, we want the transmission to be *realiable and in-order*. Entering TCP.
+
+### Transmission Control Protocol Layer (TCP)
+Basically it means the receiver is guaranteed to receive **all the data** the sender sends, and **in the order** it was sent.
+
+Imagine that the IP layer gives you the `send_packet` API:
+```python
+# Send an IP packet. Return `True` if it reaches the destination.
+def send_packet(packet, dst_ip_address)
+```
+For the first problem we can make sure the sender resends until all are success:
+```python
+while len(unsent_packets) > 0:
+    for p in unsent_packets:
+        send_packet(p, ip_address)
+```
+
+However, some packets might arrive faster than the others. Some will get lost. In addition, we cannot afford to wait until the previous packet is sent before we start sending the next one. We want to somehow send them together in parallel. How to deal with these?
+
+One idea is to attach a number to each packet to represent the original order. When it arrives, the receiver puts each packet in an *infinite array* at the corresponding spot.
+
+```
+ `last_reliable_index`
+        |
+    ____v____________________
+... p6|p7|__|__|p10|__|p12|__ ...
+```
+
+For example, `p10` and `p12` happen to arrive faster than `p8` and `p9` (they might be lost). We update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above.
+
+Of course there're problems to think about with this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that *it's possible to make reliability out of unreliable (IP) channels.*
+
+
+## Part 1: Making TCP a little more convenient
+
+**Luckily, all those details are handled in Socket API.** Similar to the concept of infinite array previously mentioned, it provides an abstraction of a *TCP channel* to send and receive the data reliably.
+
+We call one end of the channel as *socket*:
+```
+                     RECEIVER SOCKET
+------------------------------------
+>>>     |p9|       |p8|   |p7|p6|...
+------------------------------------
+```
+Socket is identified by IP address and port number. Port number simply allows one IP address to have multiple connections simultaneously. For example, on your server you might serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your laptop, opening multiple Chrome tabs will be done in different ports, etc. It would be sad if you can have one connection at a time.
+
+We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. Note that this part is the lowest-level code we have here.
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
-[A quick intro about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
+[A little more detail about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
 
-## 2. From TCP to HTTP
+## Part 2: From TCP to HTTP
 Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py).
 
 ### 2.1 Make the Server Understand HTTP
