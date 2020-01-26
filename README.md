@@ -1,5 +1,5 @@
 # From TCP to HTTP: An Introduction to Web Server
-A simple HTTP server built directly from socket APIs. 
+A simple HTTP server built directly from socket API.
 
 Run:
 ```python
