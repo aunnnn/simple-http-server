@@ -39,7 +39,10 @@ ________|^|_______
         ...  <~~~ DATA ENTERS HERE
 ```
  ### Internet Protocol Layer (IP)
- As you've imagined the IP (or Network) layer deals with IP addresses. The level directly below it (not shown in the diagram), the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address.
+ As you've imagined the IP (or Network) layer deals with IP addresses. The level directly below it (not shown in the diagram), the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address. That won't be a problem if you always connect to a device closer to you:
+ ```
+ 👨‍💻____👩‍💻
+ ```
  
  That's why IP layer is important. It lets you decouple the hardware entity from your network entity. To emphasize, **now two devices won't be required to talk directly.** 
  
@@ -49,8 +52,10 @@ ________|^|_______
         \         / \ / \___👩‍💻
          O ----- O   O
 ```
- #### There are two big problems though
-Although IP layer makes sure we sent *packets* between two locations correctly, but:
+ #### There are two big problems though.
+Although IP layer makes sure we sent IP packets between two locations correctly, **but it doesn't care about the result of the transmission**. It fires and forgets.
+
+Think about this:
 1. What if a packet gets lost somehow, i.e. an intermediate router simply burns and dies? 
 2. How would we send a very big, i.e. 20 GB, data over the internet? In one shot? Probably not. First it's impossible to put the whole file into the hardware to send. In general, we want to be strategic. We send and receive data in smaller chunks, i.e. in IP packets to reduce the impact of a data loss.
 
