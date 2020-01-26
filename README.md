@@ -1,5 +1,5 @@
-# From TCP to HTTP: An Introduction to Web Server: 
-A (very) simple HTTP server built straight from socket API. 
+# From TCP to HTTP: An Introduction to Web Server
+A simple HTTP server built directly from socket APIs. 
 
 Run:
 ```python
@@ -94,7 +94,7 @@ We call one end of the channel as *socket*:
 ```
 Socket is identified by IP address and port number. Port number simply allows one IP address to have multiple connections simultaneously. For example, on your server you might serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your laptop, opening multiple Chrome tabs will be done in different ports, etc. It would be sad if you can have one connection at a time.
 
-We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle all the gory details of creating and starting a TCP socket in listening state. We will have a while-True loop to wait for incoming connections from clients. Note that this part is the lowest-level code we have here.
+We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have.
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
 
