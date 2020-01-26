@@ -11,7 +11,7 @@ Change `sample_docroot` in `demo.py` to any other folder to serve from that root
 
 ---
 
-HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good way to wrap my head around it. We heard things like "TCP is a transport layer", "reliable", or "HTTP sits on top of TCP", **but what do they actually mean though?** In this guide I will show how to code a simple HTTP server on top of TCP via socket API.
+HTTP, TCP, Web server, Socket, etc. I've had some ideas but never knew a good way to wrap my head around it. We heard things like "TCP is a transport layer", "reliable", or "HTTP sits on top of TCP", but what do they actually mean though? In this guide I will show how to code a simple HTTP server on top of TCP via socket API.
 
 ## (Optional) Introduction: From IP to TCP
 
@@ -36,24 +36,24 @@ ________|^|_______
 |       IP       |
 |________________|
         |^|
-        ...  <~~~ DATA ENTERS HERE
+        ...  <~~~ DATA ENTERS
 ```
  ### Internet Protocol Layer (IP)
- As you've imagined the IP (or Network) layer deals with IP addresses. The level directly below it (not shown in the diagram), the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address. That won't be a problem if you always connect to a device closer to you:
+ As you've imagined the IP, or *Network*, layer deals with IP addresses. The level directly below it, not shown in the diagram, the *Data Link layer*, has no such concept. Perhaps it simply focuses on sending data between two devices close to each other, identified by some hardware identifiers, or MAC address. That won't be a problem if you always want to connect to a device closer to you:
  ```
  👨‍💻____👩‍💻
  ```
+ But what if you want to contact someone far away? That's why IP layer is important. *It lets you decouple the hardware entity from your network entity*. Now two devices won't be required to talk directly.
  
- That's why IP layer is important. It lets you decouple the hardware entity from your network entity. To emphasize, **now two devices won't be required to talk directly.** 
- 
- We can use some clever mechanism to pass along data through many nodes in the network, and simulate the end-to-end talking across the globe. We don't care how many hops the data takes or which devices it goes through etc., in order to reach the destination, **as long as it reaches the right one.** Otherwise, how would a laptop talks to another laptop in another part of the world?
+ We can use some clever mechanism to pass along data through many nodes in the network, and simulate the end-to-end talking across the globe. We don't care how many hops the data takes or which devices it goes through etc., in order to reach the destination, **as long as it reaches the right one.** Otherwise, how would a laptop talks to another laptop in another part of the world?:
 ```
+✉️
 👨‍💻_____O           O   O
         \         / \ / \___👩‍💻
          O ----- O   O
 ```
  #### There are two big problems though.
-Although IP layer makes sure we sent IP packets between two locations correctly, **but it doesn't care about the result of the transmission**. It fires and forgets.
+Although IP layer makes sure we sent IP packets between two locations correctly, **it doesn't care about the result of the transmission**. It fires and forgets.
 
 Think about this:
 1. What if a packet gets lost somehow, i.e. an intermediate router simply burns and dies? 
@@ -81,48 +81,61 @@ However, some packets might arrive faster than the others. Some will get lost. I
 But the thing is: **How to maintain the original order despite all of these problems?**
 
 One idea is to *attach a number to each packet* to represent the original order. When it arrives, the receiver puts each packet *at the corresponding spot in an infinite array*.
-
 ```
-`last_reliable_index`
-        |
-    ____v____________________
-... p6|p7|__|__|p10|__|p12|__ ...
+  [last_reliable_index]
+           |
+    _______v____________________
+... p5|p6|p7|__|__|p10|__|p12|__ ...
 ```
 
 For example, here packets `p10` and `p12` happen to arrive faster than `p8` and `p9` (they might be lost). 
 
-We also update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above.
+We also update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above. In the above diagram, packets from `p1-p7` are ready to be delivered.
 
-Of course there're problems to think about with this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that *it's possible to make reliability out of unreliable (IP) channels.*
+Of course, there're many problems from this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that it's possible to make reliability out of unreliable IP channels.
 
 
 ## Part 1: Making TCP a little more convenient
 
-**Luckily, all those details are handled in Socket API.** Similar to the concept of infinite array previously mentioned, it provides an abstraction of a *TCP channel* to send and receive the data reliably.
+**Luckily, all those details are handled in Socket API.** 
 
-We call one end of the channel as *socket*:
+Similar to the concept of infinite array previously mentioned, the API provides an abstraction of TCP *channel* to send and receive the data reliably. We call one end of the channel as *socket.* For example, receiver socket or *listening socket*, will pull the data out from its end:
 ```
                      RECEIVER SOCKET
 ------------------------------------
 >>>     |p9|       |p8|   |p7|p6|...
 ------------------------------------
 ```
-Socket is identified by IP address and port number. Port number simply allows one IP address to have multiple connections simultaneously. For example, on your server you might serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your laptop, opening multiple Chrome tabs will be done in different ports, etc. It would be sad if you can have one connection at a time.
+**Socket is described by IP address and port number.** Port number simply allows one IP address to have multiple channels simultaneously. It would be sad if each computer can have one connection to the internet at a time. For example, on your server you might want to serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your personal laptop, opening multiple Chrome tabs will be done in different ports so it loads them in parallel etc.
 
-We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have.
+[Socket library in Python](https://docs.python.org/3/library/socket.html) is easy to use. In sum, we create socket with [`socket(...)`](https://docs.python.org/3/library/socket.html#socket.socket). Sender sends `bytes` data with [`send(bytes)`](https://docs.python.org/3/library/socket.html#socket.socket.send) (or [`sendall`](https://docs.python.org/3/library/socket.html#socket.socket.sendall), which keeps trying until it sends all) and receiver pulls `n` bytes out of the socket with [`recv(n)`](https://docs.python.org/3/library/socket.html#socket.socket.recv). Alright it's not that simple, but you get it.
 
-Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. After this point, server and client can communicate through `send()` and `recv()` methods of the socket API.
+We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have. Checkout the [`serve_forever` function](https://github.com/aunnnn/simple-http-server/blob/master/httpserver/TCPServer.py#L70).
+
+Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. 
+
+After this point, server and client can communicate through `send()` and `recv()` methods of the socket API. (Note that we won't use them here, but inside the variable `connection_handler_func`, which is to be extended by `HTTPServer` in the next section.)
 
 [A little more detail about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
 
 ## Part 2: From TCP to HTTP
-Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py).
+Next, we create [`HTTPServer`](./httpserver/HTTPServer.py) which extends `TCPServer` to make it *understand HTTP requests* and able to *send back HTTP responses* to the client via the socket. The meat of this work is in [`HTTPConnectionHandler`](./httpserver/HTTPConnectionHandler.py). 
 
 ### 2.1 Make the Server Understand HTTP
-To understand what someone's talking about on the internet, we just have to know how to *detect* and *parse* the HTTP language. `HTTPConnectionHandler` does just that, though only a very small subset of it.
+To understand what someone's talking about on the internet, we just have to know how to *detect* and *parse* the HTTP language. [`HTTPConnectionHandler.get_request`](https://github.com/aunnnn/simple-http-server/blob/d726f53ebda24502fee662faeff0a7322e4e6bc4/httpserver/HTTPConnectionHandler.py#L67) does all of this, though only a very small subset of it.
 
 #### Detecting/Delimiting a Request
-One of the things this class handles is *detecting a complete request*, i.e. find where it starts and ends. Since the socket API is just all about reliable streams of data, it doesn't care about the semantic of that data. In addition, each request *can have variable length* so we can't just pull off 1024 bytes from the socket and call it a complete request.
+One of the things this class handles is *detecting a complete request*, i.e. find where it starts and ends, and then pull it off from the socket:
+```
+                DETECTED!
+         |                    |
+---------v--------------------v------
+XDF@$D#51GET / HTTP/1.1 ...\r\nQWEIO@
+-------------------------------------
+```
+However, each request *can have variable length* so we can't just pull off 1024 bytes from the socket (unless we have our own protocol where all messages have fixed length of 1024 bytes). 
+
+How should we solve this? We can utilize the format of an HTTP request.
 
 First recall the format of HTTP request and response, which involves 4 sections: 
 1. Start-line, 
@@ -147,7 +160,7 @@ Now here's the catch: *There are always two `\r\n`'s at the end of the meta-info
 while True:
     if '\r\n\r\n' in self.unprocessed_data:
         end_of_request_index = self.unprocessed_data.index('\r\n\r\n')
-        # Cut off a request
+        # Pull off a request
         request_string = self.unprocessed_data[:end_of_request_index]
         # Delete from buffer
         self.unprocessed_data = self.unprocessed_data[end_of_request_index+len('\r\n\r\n'):]
