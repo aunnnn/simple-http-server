@@ -59,7 +59,7 @@ Think about this:
 1. What if a packet gets lost somehow, i.e. an intermediate router simply burns and dies? 
 2. How would we send a very big, i.e. 20 GB, data over the internet? In one shot? Probably not. First it's impossible to put the whole file into the hardware to send. In general, we want to be strategic. We send and receive data in smaller chunks, i.e. in IP packets to reduce the impact of a data loss.
 
-That is, we want the transmission to be *realiable and in-order*. Entering TCP.
+That is, we want the transmission to be *reliable and in-order*. Entering TCP.
 
 ### Transmission Control Protocol Layer (TCP)
 Basically it means the receiver is guaranteed to receive **all the data** the sender sends, and **in the order** it was sent.
@@ -69,7 +69,7 @@ Imagine that the IP layer gives you the `send_packet` API:
 # Send an IP packet. Return `True` if it reaches the destination.
 def send_packet(packet, dst_ip_address)
 ```
-For the first problem we can make sure the sender resends until all are success:
+For the first problem we can make sure the sender resends until all succeed:
 ```python
 while len(unsent_packets) > 0:
     for p in unsent_packets:
@@ -90,31 +90,31 @@ One idea is to *attach a number to each packet* to represent the original order.
 
 For example, here packets `p10` and `p12` happen to arrive faster than `p8` and `p9` (they might be lost). 
 
-We also update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above. In the above diagram, packets from `p1-p7` are ready to be delivered.
+We also update `last_reliable_index` pointer to keep track of **up until which index the data stream can be considered complete.** That is, there's no hole. The data stream up until `last_reliable_index` can be safely passed on to the layer above. In the above diagram, packets `p1-p7` are ready to be delivered.
 
-Of course, there're many problems from this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that it's possible to make reliability out of unreliable IP channels.
+Of course, there're many problems with this idea, i.e. how to maintain the pointer, how to implement the infinite array, etc. But at least it demonstrates that it's possible to make reliability out of unreliable IP channels.
 
 
 ## Part 1: Making TCP a little more convenient
 
 **Luckily, all those details are handled in Socket API.** 
 
-Similar to the concept of infinite array previously mentioned, the API provides an abstraction of TCP *channel* to send and receive the data reliably. We call one end of the channel as *socket.* For example, receiver socket or *listening socket*, will pull the data out from its end:
+Similar to the concept of infinite array previously mentioned, the API provides an abstraction of TCP *channel* to send and receive the data reliably. We call one end of the channel as *socket.* For example, the receiver socket or *listening socket*, will pull the data out from its end:
 ```
                      RECEIVER SOCKET
 ------------------------------------
 >>>     |p9|       |p8|   |p7|p6|...
 ------------------------------------
 ```
-**Socket is described by IP address and port number.** Port number simply allows one IP address to have multiple channels simultaneously. It would be sad if each computer can have one connection to the internet at a time. For example, on your server you might want to serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your personal laptop, opening multiple Chrome tabs will be done in different ports so it loads them in parallel etc.
+**Socket is described by IP address and port number.** Port number simply allows one IP address to have multiple channels simultaneously. It would be sad if each computer can have one connection to the internet at a time. For example, on your server, you might want to serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your personal laptop, opening multiple Chrome tabs will be done in different ports so it loads them in parallel, etc.
 
-[Socket library in Python](https://docs.python.org/3/library/socket.html) is easy to use. In sum, we create socket with [`socket(...)`](https://docs.python.org/3/library/socket.html#socket.socket). Sender sends `bytes` data with [`send(bytes)`](https://docs.python.org/3/library/socket.html#socket.socket.send) (or [`sendall`](https://docs.python.org/3/library/socket.html#socket.socket.sendall), which keeps trying until it sends all) and receiver pulls `n` bytes out of the socket with [`recv(n)`](https://docs.python.org/3/library/socket.html#socket.socket.recv). Alright it's not that simple, but you get it.
+[The socket library in Python](https://docs.python.org/3/library/socket.html) is easy to use. In sum, we create socket with [`socket(...)`](https://docs.python.org/3/library/socket.html#socket.socket). Sender sends `bytes` data with [`send(bytes)`](https://docs.python.org/3/library/socket.html#socket.socket.send) (or [`sendall`](https://docs.python.org/3/library/socket.html#socket.socket.sendall), which keeps trying until it sends all) and receiver pulls `n` bytes out of the socket with [`recv(n)`](https://docs.python.org/3/library/socket.html#socket.socket.recv). Alright, it's not that simple, but you get it.
 
-We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have. Checkout the [`serve_forever` function](https://github.com/aunnnn/simple-http-server/blob/master/httpserver/TCPServer.py#L70).
+We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have. Check out the [`serve_forever` function](https://github.com/aunnnn/simple-http-server/blob/master/httpserver/TCPServer.py#L70).
 
 Once there's a new connection, `socket.accept()` will unblock and return a newly created socket (we called it `connection` in code), we spawn a new thread to work on it. This way, the main thread can continue to focus on just accepting & spawning threads for new connections. 
 
-After this point, server and client can communicate through `send()` and `recv()` methods of the socket API. (Note that we won't use them here, but inside the variable `connection_handler_func`, which is to be extended by `HTTPServer` in the next section.)
+After this point, server and client can communicate through `send()` and `recv()` methods of the socket API. (Note that we won't use them here, but inside `connection_handler_func` which is to be extended by `HTTPServer` in the next section.)
 
 [A little more detail about socket programming at the bottom.](#brief-overview-of-socket-programming-and-tcp)
 
@@ -133,7 +133,7 @@ One of the things this class handles is *detecting a complete request*, i.e. fin
 XDF@$D#51GET / HTTP/1.1 ...\r\nQWEIO@
 -------------------------------------
 ```
-However, each request *can have variable length* so we can't just pull off 1024 bytes from the socket (unless we have our own protocol where all messages have fixed length of 1024 bytes). 
+However, each request *can have a variable length* so we can't just pull off 1024 bytes from the socket (unless we have our own protocol where all messages have fixed length of 1024 bytes). 
 
 How should we solve this? We can utilize the format of an HTTP request.
 
@@ -143,7 +143,7 @@ First recall the format of HTTP request and response, which involves 4 sections:
 3. `\r\n` (Indicate the end of meta-information)
 4. Body (Optional, i.e. in POST request, or response)
 
-Each line in section 1 and 2 end with `\r\n` (called "Carriage Return Line Feed" or CRLF). If there's a body, it immediately follows that CRLF in section 3, **without any extra `\r\n` after it.**
+Each line in section 1 and 2 ends with `\r\n` (called "Carriage Return Line Feed" or CRLF). If there's a body, it immediately follows that CRLF in section 3, **without any extra `\r\n` after it.**
 
 Below is a sample request (sent by `curl localhost:8080 -v`):
 ```
