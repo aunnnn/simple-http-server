@@ -19,7 +19,7 @@ class TCPServer:
 
         self.socket = None
 
-        # Number of unaccepted new connections on the backlog queue to the specified port (if more it refuses)
+        # Number of *unaccepted* new connections on the backlog queue to the specified port (if more it refuses)
         # If we handle each new connection fast (i.e. spawn a new thread for it and move on), this should be fine.
         self.connection_backlog_queue_size = 5
 

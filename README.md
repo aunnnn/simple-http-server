@@ -108,7 +108,11 @@ Similar to the concept of infinite array previously mentioned, the API provides 
 ```
 **Socket is described by IP address and port number.** Port number simply allows one IP address to have multiple channels simultaneously. It would be sad if each computer can have one connection to the internet at a time. For example, on your server, you might want to serve incoming web requests in one port and handle `ssh` requests in another port at the same time. On your personal laptop, opening multiple Chrome tabs will be done in different ports so it loads them in parallel, etc.
 
-[The socket library in Python](https://docs.python.org/3/library/socket.html) is easy to use. In sum, we create socket with [`socket(...)`](https://docs.python.org/3/library/socket.html#socket.socket). Sender sends `bytes` data with [`send(bytes)`](https://docs.python.org/3/library/socket.html#socket.socket.send) (or [`sendall`](https://docs.python.org/3/library/socket.html#socket.socket.sendall), which keeps trying until it sends all) and receiver pulls `n` bytes out of the socket with [`recv(n)`](https://docs.python.org/3/library/socket.html#socket.socket.recv). Alright, it's not that simple, but you get it.
+[The socket library in Python](https://docs.python.org/3/library/socket.html) is easy to use. In sum, we create socket with [`socket(...)`](https://docs.python.org/3/library/socket.html#socket.socket). Sender sends `bytes` data with [`send(bytes)`](https://docs.python.org/3/library/socket.html#socket.socket.send) (or [`sendall`](https://docs.python.org/3/library/socket.html#socket.socket.sendall), which keeps trying until it sends all) and receiver pulls `n` bytes out of the socket with [`recv(n)`](https://docs.python.org/3/library/socket.html#socket.socket.recv). You then `close()` when you finish the transmission, *or whenever a protocol wants*. For example, in HTTP, you would close each time you're done with a request by default, unless `Connection: keep-alive` is specified.
+
+Alright, it's not that simple, but you get it.
+
+### Implementation
 
 We will create [`TCPServer`](./httpserver/TCPServer.py) as a thin wrapper over the socket API to handle the details of creating and starting a TCP socket. We will have a while-True loop to wait for incoming connections from clients. Note that this part would be the lowest-level code we have. Check out the [`serve_forever` function](https://github.com/aunnnn/simple-http-server/blob/master/httpserver/TCPServer.py#L70).
 
