@@ -178,7 +178,7 @@ while True:
     # Concat
     self.unprocessed_data += data
 ```
-More code for the detection part is at `HTTPConnectionHandler.__detect_request_from_socket`.
+More code for the detection part is at [`HTTPConnectionHandler.__detect_request_from_socket`.](https://github.com/aunnnn/simple-http-server/blob/55664c6b9a8e3447b06bb62cf072f3d17a77abbb/httpserver/HTTPConnectionHandler.py#L95).
 
 More details about the format of HTTP Messages is [here.](https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages)
 
